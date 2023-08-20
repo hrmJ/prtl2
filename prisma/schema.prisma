@@ -1,0 +1,296 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/client"
+  previewFeatures = ["deno"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model backgrounds {
+  id          Int     @id @default(autoincrement())
+  filename    String? @db.VarChar(200)
+  description String? @db.VarChar(999)
+}
+
+model biblesegments {
+  id          Int     @id @default(autoincrement()) @db.UnsignedInt
+  start_book  String? @db.VarChar(100)
+  start_chap  Int?
+  start_verse Int?
+  end_book    String? @db.VarChar(100)
+  end_chap    Int?
+  end_verse   Int?
+}
+
+model collected_offerings {
+  id             Int            @id @default(autoincrement()) @db.UnsignedInt
+  target_id      Int            @db.UnsignedInt
+  service_id     Int            @db.UnsignedInt
+  amount         Decimal?       @default(0.00) @db.Decimal(60, 2)
+  offering_goals offering_goals @relation(fields: [target_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "collected_offerings_ibfk_1")
+  services       services       @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "collected_offerings_ibfk_2")
+
+  @@index([service_id], map: "service_index")
+  @@index([target_id], map: "target_index")
+}
+
+model comments {
+  id           Int       @id @default(autoincrement()) @db.UnsignedInt
+  service_id   Int       @db.UnsignedInt
+  reply_to     Int?
+  content      String?   @db.Text
+  commentator  String?   @db.VarChar(100)
+  theme        String?   @db.VarChar(100)
+  comment_time DateTime? @db.DateTime(0)
+  services     services  @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "comments_ibfk_1")
+
+  @@index([service_id], map: "service_index")
+}
+
+model events {
+  id             Int       @id @default(autoincrement()) @db.UnsignedInt
+  name           String?   @db.VarChar(300)
+  place_and_time String?   @db.VarChar(300)
+  description    String?   @db.VarChar(5000)
+  event_date     DateTime? @db.Date
+  has_songs      Boolean?  @default(false)
+}
+
+model headers {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  template_name String?  @db.VarChar(100)
+  maintext      String?  @db.VarChar(9999)
+  imgname       String?  @db.VarChar(300)
+  imgposition   String?  @db.VarChar(300)
+  is_aside      Boolean? @default(false)
+}
+
+model infos {
+  id         Int     @id @default(autoincrement()) @db.UnsignedInt
+  service_id Int     @db.UnsignedInt
+  slot_name  String? @db.VarChar(300)
+  content_id Int     @db.UnsignedInt
+  addedclass String? @default(".Infodia") @db.VarChar(300)
+  header_id  Int?
+}
+
+model infosegments {
+  id           Int     @id @default(autoincrement()) @db.UnsignedInt
+  maintext     String? @db.VarChar(9999)
+  header       String? @db.VarChar(300)
+  genheader    String? @db.VarChar(300)
+  subgenheader String? @db.VarChar(300)
+  imgname      String? @db.VarChar(300)
+  imgposition  String? @db.VarChar(300)
+}
+
+model liturgicalsegments {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  text_title    String?  @db.VarChar(9999)
+  use_as_header Boolean? @default(false)
+}
+
+model ltextdata {
+  id             Int              @id @default(autoincrement()) @db.UnsignedInt
+  title          String?          @unique(map: "title") @db.VarChar(300)
+  ltextversedata ltextversedata[]
+}
+
+model ltextversedata {
+  id        Int       @id @default(autoincrement()) @db.UnsignedInt
+  ltext_id  Int       @db.UnsignedInt
+  verse     String?   @db.VarChar(999)
+  ltextdata ltextdata @relation(fields: [ltext_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ltextversedata_ibfk_1")
+
+  @@index([ltext_id], map: "ltext_index")
+}
+
+model offering_goals {
+  id                  Int                   @id @default(autoincrement()) @db.UnsignedInt
+  target_id           Int                   @db.UnsignedInt
+  name                String?               @db.VarChar(100)
+  description         String?               @db.VarChar(9999)
+  amount              Decimal?              @default(0.00) @db.Decimal(60, 2)
+  is_default          Boolean?              @default(false)
+  collected_offerings collected_offerings[]
+  offering_targets    offering_targets      @relation(fields: [target_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "offering_goals_ibfk_1")
+
+  @@index([target_id], map: "target_index")
+}
+
+model offering_targets {
+  id             Int              @id @default(autoincrement()) @db.UnsignedInt
+  name           String?          @db.VarChar(100)
+  description    String?          @db.VarChar(9999)
+  offering_goals offering_goals[]
+}
+
+model presentation_content {
+  id                     Int                    @id @default(autoincrement()) @db.UnsignedInt
+  slot_id                Int                    @db.UnsignedInt
+  content_type           String?                @db.VarChar(100)
+  new_slide              String?                @db.VarChar(100)
+  content                String?                @db.Text
+  presentation_structure presentation_structure @relation(fields: [slot_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "presentation_content_ibfk_1")
+
+  @@index([slot_id], map: "service_index")
+}
+
+model presentation_structure {
+  id                   Int                    @id @default(autoincrement()) @db.UnsignedInt
+  service_id           Int?
+  slot_name            String?                @db.VarChar(300)
+  slot_number          Int?
+  slot_type            String?                @db.VarChar(300)
+  id_in_type_table     String?                @db.VarChar(300)
+  addedclass           String?                @db.VarChar(300)
+  header_id            Int?
+  content_id           Int                    @db.UnsignedInt
+  instruction          String?                @db.Text
+  presentation_content presentation_content[]
+}
+
+model responsibilities {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  service_id     Int      @db.UnsignedInt
+  responsibility String?  @db.VarChar(100)
+  responsible    String?  @db.VarChar(100)
+  services       services @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "vastuut_ibfk_1")
+
+  @@index([service_id], map: "service_index")
+}
+
+model responsibilities_meta {
+  id             Int     @id @default(autoincrement()) @db.UnsignedInt
+  responsibility String? @db.VarChar(100)
+  description    String? @db.VarChar(100)
+}
+
+model seasons {
+  id        Int       @id @default(autoincrement()) @db.UnsignedInt
+  startdate DateTime? @db.Date
+  enddate   DateTime? @db.Date
+  theme     String?   @db.VarChar(100)
+  comments  String?   @db.Text
+  name      String?   @db.VarChar(100)
+}
+
+model service_specific_presentation_structure {
+  id               Int     @id @default(autoincrement()) @db.UnsignedInt
+  service_id       Int     @db.UnsignedInt
+  slot_name        String? @db.VarChar(300)
+  slot_number      Int?
+  slot_type        String? @db.VarChar(300)
+  id_in_type_table String? @db.VarChar(300)
+  content_id       Int     @db.UnsignedInt
+  addedclass       String? @db.VarChar(300)
+  header_id        Int?
+  instruction      String? @db.Text
+}
+
+model services {
+  id                  Int                   @id @default(autoincrement()) @db.UnsignedInt
+  servicedate         DateTime?             @db.Date
+  theme               String?               @db.VarChar(200)
+  collected_offerings collected_offerings[]
+  comments            comments[]
+  responsibilities    responsibilities[]
+  servicesongs        servicesongs[]
+  serviceverses       serviceverses[]
+}
+
+model servicesongs {
+  id              BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  service_id      Int      @db.UnsignedInt
+  song_title      String?  @default("") @db.VarChar(200)
+  verses          String?  @default("") @db.VarChar(200)
+  is_instrumental String?  @default("no") @db.VarChar(10)
+  song_id         Int?
+  songtype        String   @db.VarChar(100)
+  position        Int?
+  services        services @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "servicesongs_ibfk_1")
+
+  @@index([service_id], map: "service_index")
+}
+
+model serviceverses {
+  id           Int      @id @default(autoincrement()) @db.UnsignedInt
+  service_id   Int      @db.UnsignedInt
+  segment_name String?  @default("") @db.VarChar(200)
+  testament    String?  @default("") @db.VarChar(200)
+  startbook    String?  @default("") @db.VarChar(200)
+  endbook      String?  @default("") @db.VarChar(200)
+  startchapter Int?
+  endchapter   Int?
+  startverse   Int?
+  endverse     Int?
+  services     services @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "serviceverses_ibfk_1")
+
+  @@index([service_id], map: "service_index")
+}
+
+model smallgroups {
+  id             Int      @id @default(autoincrement()) @db.UnsignedInt
+  name           String?  @db.VarChar(100)
+  description    String?  @db.VarChar(9999)
+  resp_name      String?  @db.VarChar(100)
+  day            String?  @db.VarChar(100)
+  time_and_place String?  @db.VarChar(400)
+  is_active      Boolean? @default(false)
+}
+
+model songdata {
+  id                  Int         @id @default(autoincrement()) @db.UnsignedInt
+  title               String?     @db.VarChar(300)
+  composer            String?     @db.VarChar(300)
+  lyrics              String?     @db.VarChar(300)
+  version_description String?     @db.VarChar(300)
+  songtags            songtags[]
+  versedata           versedata[]
+}
+
+model songsegments {
+  id                    Int      @id @default(autoincrement()) @db.UnsignedInt
+  songdescription       String?  @db.Text
+  restrictedto          String?  @db.Text
+  singlename            String?  @db.VarChar(100)
+  is_multi              Boolean? @default(false)
+  segment_name_is_title Boolean? @default(false)
+}
+
+model songtags {
+  id       Int      @id @default(autoincrement()) @db.UnsignedInt
+  song_id  Int      @db.UnsignedInt
+  tag      String?  @default("") @db.VarChar(200)
+  songdata songdata @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "songtags_ibfk_1")
+
+  @@index([song_id], map: "song_index")
+}
+
+model styles {
+  id         Int     @id @default(autoincrement())
+  classname  String? @db.VarChar(200)
+  tagname    String? @db.VarChar(200)
+  attr       String? @db.VarChar(200)
+  value      String? @db.VarChar(200)
+  stylesheet String? @db.VarChar(200)
+}
+
+model users {
+  id       Int     @id @default(autoincrement()) @db.UnsignedInt
+  username String? @unique(map: "username") @db.VarChar(20)
+  password String? @db.Char(32)
+}
+
+model versedata {
+  id        Int      @id @default(autoincrement()) @db.UnsignedInt
+  song_id   Int      @db.UnsignedInt
+  verse     String?  @db.VarChar(999)
+  versetype String?  @default("verse") @db.VarChar(99)
+  songdata  songdata @relation(fields: [song_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "versedata_ibfk_1")
+
+  @@index([song_id], map: "song_index")
+}
